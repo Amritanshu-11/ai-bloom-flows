@@ -1,13 +1,14 @@
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BriefContent, BriefData } from "./BriefContent";
 
 interface BriefModalProps {
-  briefHtml: string | null;
+  briefData: BriefData | null;
   onClose: () => void;
 }
 
-export const BriefModal = ({ briefHtml, onClose }: BriefModalProps) => {
-  if (!briefHtml) return null;
+export const BriefModal = ({ briefData, onClose }: BriefModalProps) => {
+  if (!briefData) return null;
 
   return (
     <div className="fixed inset-0 bg-background/90 backdrop-blur-sm z-40 flex items-center justify-center p-4">
@@ -20,7 +21,7 @@ export const BriefModal = ({ briefHtml, onClose }: BriefModalProps) => {
         >
           <X className="w-6 h-6" />
         </Button>
-        <div dangerouslySetInnerHTML={{ __html: briefHtml }} />
+        <BriefContent data={briefData} />
       </div>
     </div>
   );

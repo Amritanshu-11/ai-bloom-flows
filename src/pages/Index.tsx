@@ -8,6 +8,7 @@ import { BookingModal } from "@/components/BookingModal";
 import { BookingsList } from "@/components/BookingsList";
 import { DataCleaningSummary } from "@/components/DataCleaningSummary";
 import { BriefModal } from "@/components/BriefModal";
+import { BriefData } from "@/components/BriefContent";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
@@ -15,7 +16,7 @@ const Index = () => {
   const [filteredOut, setFilteredOut] = useState<FilteredLead[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [briefHtml, setBriefHtml] = useState<string | null>(null);
+  const [briefData, setBriefData] = useState<BriefData | null>(null);
   const [isBookingLoading, setIsBookingLoading] = useState(false);
   const [language, setLanguage] = useState<'en' | 'hi'>('en');
 
@@ -24,26 +25,31 @@ const Index = () => {
   }, [language]);
 
   useEffect(() => {
-    console.log("--- STARTING DATA IMPORT AND CLEANING (Step 1) ---");
+    if (import.meta.env.DEV) {
+      console.log("Starting data import and cleaning");
+    }
     const { cleanedLeads, filteredOutLeads } = cleanAndPrioritizeLeads(rawLeadsData);
     setLeads(cleanedLeads);
     setFilteredOut(filteredOutLeads);
-    console.log(`Cleaned ${cleanedLeads.length} Leads. Filtered/Deduped ${filteredOutLeads.length}.`);
-    console.log("--- DATA READY. Sorted by Izzki Score. ---");
+    if (import.meta.env.DEV) {
+      console.log(`Cleaned ${cleanedLeads.length} leads, filtered ${filteredOutLeads.length}`);
+    }
   }, []);
 
   useEffect(() => {
-    const isModalOpen = selectedLead !== null || briefHtml !== null;
+    const isModalOpen = selectedLead !== null || briefData !== null;
     document.body.style.overflow = isModalOpen ? 'hidden' : 'unset';
     
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [selectedLead, briefHtml]);
+  }, [selectedLead, briefData]);
 
   const handleBooking = (lead: Lead, bookingDetails: BookingDetails) => {
     if (!bookingDetails.date || !bookingDetails.time) {
-      console.error("Booking details missing!");
+      if (import.meta.env.DEV) {
+        console.error("Booking details missing");
+      }
       return;
     }
 
@@ -64,14 +70,13 @@ const Index = () => {
     setSelectedLead(null);
 
     setTimeout(() => {
-      console.log("--- SIMULATING BACKEND POST to /sendMessage STUB ---");
-      console.log("SUCCESS: Booking Confirmed.");
-      console.log("Console Payload (The simulated message data):", {
-        leadId: lead.id,
-        leadEmail: lead.email,
-        message: `Your appointment is confirmed for ${bookingDetails.date} at ${bookingDetails.time}.`,
-      });
-      console.log("-------------------------------------------------");
+      if (import.meta.env.DEV) {
+        console.log("Booking confirmed:", { 
+          leadId: lead.id, 
+          date: bookingDetails.date, 
+          time: bookingDetails.time 
+        });
+      }
       setIsBookingLoading(false);
     }, 1500);
   };
@@ -82,57 +87,20 @@ const Index = () => {
     const initialBookingTarget = 5;
     const bookingUplift = totalBookings - initialBookingTarget;
     const upliftPercentage = ((bookingUplift / initialBookingTarget) * 100 || 0).toFixed(0);
+    const conversionRate = ((totalBookings / totalCleanedLeads) * 100 || 0).toFixed(1);
 
-    const briefContent = `
-      <div class="p-6 bg-white shadow-xl rounded-xl">
-        <h1 class="text-3xl font-extrabold text-primary mb-4">${t('briefTitle')}</h1>
-        <p class="text-muted-foreground mb-6">${t('briefGeneratedOn')} ${new Date().toLocaleDateString()}</p>
+    const data: BriefData = {
+      totalBookings,
+      totalCleanedLeads,
+      initialBookingTarget,
+      bookingUplift,
+      upliftPercentage,
+      conversionRate,
+      generatedDate: new Date().toLocaleDateString(),
+      t
+    };
 
-        <h2 class="text-2xl font-bold border-b pb-2 mb-4 text-card-foreground flex items-center">
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-          ${t('kpiHeader')}
-        </h2>
-        <div class="grid grid-cols-3 gap-4 text-center">
-          <div class="p-4 bg-primary/10 rounded-lg border-b-4 border-primary">
-            <p class="text-3xl font-black text-primary">${totalBookings}</p>
-            <p class="text-sm text-muted-foreground">${t('kpiBookings')}</p>
-          </div>
-          <div class="p-4 bg-success/10 rounded-lg border-b-4 border-success">
-            <p class="text-3xl font-black text-success">${totalCleanedLeads}</p>
-            <p class="text-sm text-muted-foreground">${t('kpiProcessed')}</p>
-          </div>
-          <div class="p-4 bg-accent/10 rounded-lg border-b-4 border-accent">
-            <p class="text-3xl font-black text-accent">${((totalBookings / totalCleanedLeads) * 100 || 0).toFixed(1)}%</p>
-            <p class="text-sm text-muted-foreground">${t('kpiConversionRate')}</p>
-          </div>
-        </div>
-
-        <h2 class="text-2xl font-bold border-b pb-2 mt-8 mb-4 text-card-foreground flex items-center">
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-          ${t('upliftHeader')}
-        </h2>
-        <div class="p-4 bg-warning/10 rounded-lg shadow-inner">
-          <p class="text-card-foreground font-semibold mb-2">${t('baselineTarget')} <span class="text-lg font-mono">${initialBookingTarget} bookings/week</span></p>
-          <p class="text-xl font-bold">${t('totalUplift')}
-            <span class="${bookingUplift >= 0 ? 'text-success' : 'text-destructive'} text-3xl">
-              ${bookingUplift > 0 ? '+' : ''}${bookingUplift}
-            </span>
-          </p>
-          <p class="text-sm text-muted-foreground mt-2">${t('upliftNote')} ${upliftPercentage}% ${t('upliftIncrease')}</p>
-        </div>
-
-        <h2 class="text-2xl font-bold border-b pb-2 mt-8 mb-4 text-card-foreground flex items-center">
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-          ${t('nextActionsHeader')}
-        </h2>
-        <ol class="list-decimal pl-6 space-y-2 text-card-foreground">
-          <li class="font-medium">${t('action1')}</li>
-          <li class="font-medium">${t('action2')}</li>
-          <li class="font-medium">${t('action3')}</li>
-        </ol>
-      </div>
-    `;
-    setBriefHtml(briefContent);
+    setBriefData(data);
   }, [leads, bookings, t]);
 
   return (
@@ -206,7 +174,7 @@ const Index = () => {
         </div>
       </div>
 
-      <BriefModal briefHtml={briefHtml} onClose={() => setBriefHtml(null)} />
+      <BriefModal briefData={briefData} onClose={() => setBriefData(null)} />
       <BookingModal
         lead={selectedLead}
         onClose={() => setSelectedLead(null)}

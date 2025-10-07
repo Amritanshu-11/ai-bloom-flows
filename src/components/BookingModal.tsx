@@ -19,8 +19,25 @@ export const BookingModal = ({ lead, onClose, onConfirm, isLoading, t }: Booking
 
   if (!lead) return null;
 
+  // Calculate min and max dates for validation
+  const today = new Date().toISOString().split('T')[0];
+  const maxDate = new Date();
+  maxDate.setMonth(maxDate.getMonth() + 6);
+  const maxDateString = maxDate.toISOString().split('T')[0];
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Additional validation
+    const selectedDate = new Date(date);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < now) {
+      alert(t('pastDateError') || 'Cannot book appointments in the past');
+      return;
+    }
+    
     onConfirm(lead, { date, time });
   };
 
@@ -56,6 +73,8 @@ export const BookingModal = ({ lead, onClose, onConfirm, isLoading, t }: Booking
               id="date"
               type="date"
               required
+              min={today}
+              max={maxDateString}
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className="mt-1"
