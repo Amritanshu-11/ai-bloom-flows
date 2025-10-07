@@ -16,6 +16,7 @@ interface BookingModalProps {
 export const BookingModal = ({ lead, onClose, onConfirm, isLoading, t }: BookingModalProps) => {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
+  const [dateError, setDateError] = useState('');
 
   if (!lead) return null;
 
@@ -28,13 +29,16 @@ export const BookingModal = ({ lead, onClose, onConfirm, isLoading, t }: Booking
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Clear previous errors
+    setDateError('');
+    
     // Additional validation
     const selectedDate = new Date(date);
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     
     if (selectedDate < now) {
-      alert(t('pastDateError') || 'Cannot book appointments in the past');
+      setDateError(t('pastDateError') || 'Cannot book appointments in the past');
       return;
     }
     
@@ -76,9 +80,15 @@ export const BookingModal = ({ lead, onClose, onConfirm, isLoading, t }: Booking
               min={today}
               max={maxDateString}
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => {
+                setDate(e.target.value);
+                setDateError(''); // Clear error when user changes date
+              }}
               className="mt-1"
             />
+            {dateError && (
+              <p className="text-sm text-destructive mt-1">{dateError}</p>
+            )}
           </div>
 
           <div>
